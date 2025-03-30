@@ -14,7 +14,7 @@ account_details = {
 
 default_headers = {
         'X-Tractive-Client': TRACTIVE_CLIENT,
-        'Authorization': f"Bearer {account_details.get('token', '')}",
+        # 'Authorization': f"Bearer {account_details.get('token', '')}",
         'Content-Type': 'application/json'
     }
 
@@ -32,6 +32,8 @@ class TractiveClient():
         '''
         Join base url
         '''
+        if path[0] == '/':
+            path = path[1:]
         return urljoin(self.base_url, path)
     def request(self,method='GET',url='',data={},headers={},**kwargs):
         '''
@@ -50,12 +52,14 @@ class TractiveClient():
         '''
         Authenticate account details storing access_token and user_id
         '''
-        url = self.join_url(f'/auth/token?grant_type=tractive&platform_email={self.account_details["email"]}&platform_token={self.account_details["password"]}')
-        data = self.request(url=url)
+        url = self.join_url('auth/token')
+        payload = dict(grant_type='tractive',platform_email=self.account_details["email"],platform_token=self.account_details["password"])
+        data = self.request('POST',url=url,params=payload)
         access_token = data['access_token']
         self.headers.update({'Authorization': f'Bearer {access_token}'})
         self.account_details['access_token'] = access_token
         self.account_details['user_id'] = data['user_id']
+        self.account_details['expires_at'] = data['expires_at']
     def authenticated(self):
         '''
         is authenticated
@@ -65,7 +69,7 @@ class TractiveClient():
         '''
         Join base_url and user account_details for additional endpoints below
         '''
-        return self.join_url(f'/4/user/{self.account_details["user_id"]}')
+        return self.join_url(f'user/{self.account_details["user_id"]}/')
     def join_user_url(self,path):
         '''
         Join account related endpoints/paths
@@ -119,7 +123,7 @@ class TractiveClient():
         data = {'time_from' : start,
                 'time_to' : end,
                 'format' : 'json_segments'}
-        return self.request(url=url,data=data)
+        return self.request(url=url,params=data)
     def get_tracker_location(self,tracker_id):
         '''
         Get tracker location including address
@@ -129,7 +133,7 @@ class TractiveClient():
         options = {'latitude' : data['latlong'][0],
                 'longitude' : data['latlong'][1]}
         location_url = self.join_url('platform/geo/address/location?')
-        address = self.request(url=location_url,data=options).get('address')
+        address = self.request(url=location_url,params=options).get('address')
         data['address'] = address
         return data
     def get_tracker_hardware(self,tracker_id):
@@ -153,8 +157,8 @@ class TractiveClient():
         '''
         url = self.join_url(f'trackable_object/{pet_id}')
         data = self.request(url=url)
-        data['details']['profile_picture_link'] = f"https://graph.tractive.com/4/media/resource/{data['details']['profile_picture_link']}.jpg"
-        data['details']['cover_picture_link'] = f"https://graph.tractive.com/4/media/resource/{data['details']['cover_picture_link']}.jpg"
+        data['details']['profile_picture_link'] = f"https://graph.tractive.com/4/media/resource/{data['details']['profile_picture_id']}.jpg"
+        data['details']['cover_picture_link'] = f"https://graph.tractive.com/4/media/resource/{data['details']['cover_picture_id']}.jpg"
     def get_pets(self):
         url = self.join_user_url('trackable_objects')
         return self.request(url=url)
