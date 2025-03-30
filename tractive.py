@@ -1,14 +1,14 @@
 import requests
 from urllib.parse import urljoin
 from requests.exceptions import JSONDecodeError,ConnectionError,HTTPError
-
+import os
 import logging
 
 TRACTIVE_CLIENT = "6536c228870a3c8857d452e8"
 
 account_details = {
-    'email': '',
-    'password': ''
+    'email': os.getenv('TRACTIVE_USER',''),
+    'password': os.getenv('TRACTIVE_PASSWORD','')
 }
 
 
