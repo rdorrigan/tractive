@@ -3,8 +3,10 @@ from urllib.parse import urljoin
 from requests.exceptions import JSONDecodeError,ConnectionError,HTTPError
 import os
 import logging
+from threading import Timer
+from datetime import datetime, date
 
-TRACTIVE_CLIENT = "6536c228870a3c8857d452e8"
+TRACTIVE_CLIENT = os.getenv("TRACTIVE_CLIENT",'')
 
 account_details = {
     'email': os.getenv('TRACTIVE_USER',''),
@@ -60,6 +62,7 @@ class TractiveClient():
         self.account_details['access_token'] = access_token
         self.account_details['user_id'] = data['user_id']
         self.account_details['expires_at'] = data['expires_at']
+        self.account_details['expiration_timer'] = Timer(int(data['expires_at'])-5,self.authenticate)
     def authenticated(self):
         '''
         is authenticated
@@ -114,12 +117,16 @@ class TractiveClient():
     def get_tracker_history(self,tracker_id,start,end):
         '''
         Get tracker history for a given date range
+        start and end are formatted as POSIX timestamps from date or datetime
         '''
-        url = self.join_url(f'tracker/{tracker_id}/positions?')
+        def to_timestamp(dt):
+            if isinstance(dt,(datetime,date)):
+                return f'{dt.timestamp():.0f}'
+        url = self.join_url(f'tracker/{tracker_id}/positions')
         if not isinstance(start,str):
-            start = start.isoformat()
+            start = to_timestamp(start)
         if not isinstance(end,str):
-            end = end.isoformat()
+            end = to_timestamp(end)
         data = {'time_from' : start,
                 'time_to' : end,
                 'format' : 'json_segments'}
@@ -132,18 +139,26 @@ class TractiveClient():
         data = self.request(url=url)
         options = {'latitude' : data['latlong'][0],
                 'longitude' : data['latlong'][1]}
-        location_url = self.join_url('platform/geo/address/location?')
+        location_url = self.join_url('platform/geo/address/location')
         address = self.request(url=location_url,params=options).get('address')
         data['address'] = address
         return data
     def get_tracker_hardware(self,tracker_id):
+        '''
+        Get hardware infomation including battery level
+        '''
         url = self.join_url(f'device_hw_report/{tracker_id}')
         return self.request(url=url)
+    def get_tracker_battery(self,tracker_id):
+        '''
+        Get tracker battery level
+        '''
+        return self.get_tracker_hardware(tracker_id)['battery_level']
     def get_tracker_geo_fences(self,tracker_id):
         '''
         Get a trackers geo fences
         '''
-        url = self.join_url(f'tracker/${tracker_id}/geofences')
+        url = self.join_url(f'tracker/{tracker_id}/geofences')
         return self.request(url=url)
     def get_geo_fence(self,fence_id):
         '''
@@ -153,12 +168,12 @@ class TractiveClient():
         return self.request(url=url)
     def get_pet(self,pet_id):
         '''
-        Get pet by pet_id adding profile and cover photo links
+        Get pet by pet_id adding profile link
         '''
         url = self.join_url(f'trackable_object/{pet_id}')
         data = self.request(url=url)
-        data['details']['profile_picture_link'] = f"https://graph.tractive.com/4/media/resource/{data['details']['profile_picture_id']}.jpg"
-        data['details']['cover_picture_link'] = f"https://graph.tractive.com/4/media/resource/{data['details']['cover_picture_id']}.jpg"
+        data['details']['profile_picture_link'] = f"https://graph.tractive.com/4/media/resource/{data['details']['profile_picture_id']}.png"
+        return data
     def get_pets(self):
         url = self.join_user_url('trackable_objects')
         return self.request(url=url)
@@ -189,4 +204,3 @@ class TractiveClient():
         
         url = self.join_url(f"tracker/{tracker_id}/command/buzzer_control/{'on' if on_off else 'off'}")
         return self.request(url=url)
-    
