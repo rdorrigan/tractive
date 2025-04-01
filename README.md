@@ -3,7 +3,7 @@ https://github.com/FAXES/tractive
 https://github.com/dominique-boerner/unofficial-tractive-rest-api
 https://github.com/zhulik/aiotractive
 
-```
+```python
 # Example
 from tractive import account_details,TractiveClient as TC
 client = TC(account_details)
