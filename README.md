@@ -1,10 +1,11 @@
-A Python API wrapper of the Tractive Pet GPS tracker influenced by 
-https://github.com/FAXES/tractive
-https://github.com/dominique-boerner/unofficial-tractive-rest-api
-https://github.com/zhulik/aiotractive
+A Python API wrapper of the Tractive Pet GPS tracker influenced by  
+https://github.com/FAXES/tractive  
+https://github.com/dominique-boerner/unofficial-tractive-rest-api  
+https://github.com/zhulik/aiotractive  
+
+## Getting Started Example  
 
 ```python
-# Example
 from tractive import account_details,TractiveClient as TC
 client = TC(account_details)
 trackers = client.get_trackers()
